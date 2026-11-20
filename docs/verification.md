@@ -6,7 +6,7 @@
 
 | 项目 | 命令 | 结果 |
 |---|---|---|
-| 全量测试 | `npm test` | 450 pass / 0 fail |
+| 全量测试 | `npm test` | 451 pass / 0 fail |
 | 入口契约 | `node --test tests/mount.test.mjs tests/qwenwork-intl.test.mjs` | 13 pass；双 Provider、国际设备流、CN 默认值与 MIT 署名 |
 | 账号复用 | `node --test tests/qwenwork-import.test.mjs` | 8 pass；发现、UID 去重、最新凭据、flow callback、旋转续期同步 |
 | 自动签到 | `node --test tests/campaign.test.mjs` | 9 pass |
@@ -84,6 +84,8 @@ claim → ensure
 - 本机没有国际版账号，因此未独立复验登录后的模型目录和聊天；PR 作者报告的登录与聊天 200 不作为本机实测证据。
 - 协议上游为 `magpie-community/plugins/packages/qoder@0.2.71`（MIT），再往上为 `ufec/CLIProxyAPI`（MIT）。
 - `LICENSE` 已改为实际署名 `MYCF711 and contributors`；`NOTICE.md` 保留 Gyl1219 / PR #1 和上游署名，并随附两份完整 MIT 许可。
+- Free 账号的 700 积分来自官方 500 注册奖励与 200 每日登录奖励；`quota.remaining` 是真实任务额度，不是装饰字段。
+- 三个模型目录均返回 `price_factor=0`，但相同代码题实测扣费：Pro `0.0205`、Standard `0.0051`、Flagship `0.0522`。0.4.4 起国际版不再显示“免费”，未知倍率以 rate 0 留空，不套企业 BYOK 的 1X / 2X / 3X。
 
 ## 8. 回滚
 

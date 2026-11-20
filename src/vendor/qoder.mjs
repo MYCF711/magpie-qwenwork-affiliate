@@ -1059,6 +1059,10 @@ function configModel(m) {
 }
 
 function runtimeModel(site, m) {
+  // qwenwork.ai can report price_factor=0 while quota.remaining still falls
+  // after a chat. Such a catalog must not feed magpie's Free-first routing or
+  // display a free badge; an unknown multiplier stays 0, not "free".
+  const catalogPriceUnknown = site.catalogPriceUnknown === true
   return {
     id: m.id,
     providerID: site.id,
@@ -1081,11 +1085,11 @@ function runtimeModel(site, m) {
     release_date: "",
     variants: Object.fromEntries((m.efforts ?? []).map((e) => [e, { reasoningEffort: e }])),
     // magpie's own: served at no cost to the plan's credits
-    free: !!m.free,
+    free: catalogPriceUnknown ? false : !!m.free,
     // magpie's own: the credits a request costs, as a multiple, and the
-    // price before a discount running now (0: none)
-    rate: m.rate ?? 0,
-    rateWas: m.rateWas ?? 0,
+    // price before a discount running now (0: none / unknown)
+    rate: catalogPriceUnknown ? 0 : (m.rate ?? 0),
+    rateWas: catalogPriceUnknown ? 0 : (m.rateWas ?? 0),
   }
 }
 
@@ -3308,6 +3312,8 @@ const SITES = {
     deviceWeb: "https://gateway.qwenwork.ai",
     deviceClientId: "cc65e5fc-05bd-4f5d-a4e8-0df19aa3d75a",
     deviceRedirect: "qwenwork://",
+    // Verified on a Free account: price_factor=0 coexists with credit debits.
+    catalogPriceUnknown: true,
   },
 }
 
@@ -4298,4 +4304,4 @@ export async function QwenWorkEnterpriseAuthPlugin({ client }) {
 export const protocol = { makePlugin, deviceSignIn, openapi, siteOf }
 
 // for tests
-export const _internal = { spentOf, OUTPUT_CAPS, LEARNED_CAPS, outputCap, fetchListing, accountIdentity, deviceRefreshBody, qwenworkClientHeaders, freeView, maskPhone, phoneLabelOf, realEmailOf, chatHeaders, machineOS, machineHostname, cosyHeaders, typedUnions, Splitter, campaignRuntime, RUNTIMES, campaignPage, campaignTarget, vpcInstance, vpcSite, dedicatedOrigin, dedicatedHost, dedicatedSite, lingmaRoots, lingmaDecode, lingmaSite, lingmaHeaders, LINGMA_MODELS, parseUsage, gfmt, when, failure, modelInfo, qoderBody, qoderMessages, kimiModel, cacheMarked, sessionOf, namedSession, taskOf, TASKS, TASK_MAX, TASK_IDLE, SESSION, SITES, decodeBody, events, QUEUE, queueState }
+export const _internal = { runtimeModel, spentOf, OUTPUT_CAPS, LEARNED_CAPS, outputCap, fetchListing, accountIdentity, deviceRefreshBody, qwenworkClientHeaders, freeView, maskPhone, phoneLabelOf, realEmailOf, chatHeaders, machineOS, machineHostname, cosyHeaders, typedUnions, Splitter, campaignRuntime, RUNTIMES, campaignPage, campaignTarget, vpcInstance, vpcSite, dedicatedOrigin, dedicatedHost, dedicatedSite, lingmaRoots, lingmaDecode, lingmaSite, lingmaHeaders, LINGMA_MODELS, parseUsage, gfmt, when, failure, modelInfo, qoderBody, qoderMessages, kimiModel, cacheMarked, sessionOf, namedSession, taskOf, TASKS, TASK_MAX, TASK_IDLE, SESSION, SITES, decodeBody, events, QUEUE, queueState }
