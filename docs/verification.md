@@ -6,11 +6,11 @@
 
 | 项目 | 命令 | 结果 |
 |---|---|---|
-| 全量测试 | `npm test` | 445 pass / 0 fail |
-| 入口契约 | `node --test tests/mount.test.mjs` | 8 pass；无插件选项、无额外登录字段、固定渠道 |
+| 全量测试 | `npm test` | 450 pass / 0 fail |
+| 入口契约 | `node --test tests/mount.test.mjs tests/qwenwork-intl.test.mjs` | 13 pass；双 Provider、国际设备流、CN 默认值与 MIT 署名 |
 | 账号复用 | `node --test tests/qwenwork-import.test.mjs` | 8 pass；发现、UID 去重、最新凭据、flow callback、旋转续期同步 |
 | 自动签到 | `node --test tests/campaign.test.mjs` | 9 pass |
-| 合规 | `node scripts/check.mjs` | 45 pass / 0 warning / 0 fail |
+| 合规 | `node scripts/check.mjs` | 48 pass / 0 warning / 0 fail（双 Provider 增加 3 项） |
 | 错误码 | `npm run check:errors` | 0 fail |
 | User-Agent | `npm run check:ua` | 0 fail / 0 warning |
 | 文档时效 | `node scripts/check-docs.mjs` | 4 pass / 0 fail |
@@ -76,7 +76,16 @@ claim → ensure
 - 复用过程不发网络请求；点击时重新读取最新凭据，添加后由现有自动签到完成会员领取。
 - 续期优先采用同一 UID 的最新有效凭据；旋转旧链后同步相关 QwenWork 记录，独立新链不覆盖。
 
-## 7. 回滚
+## 7. 国际版与上游许可
+
+- PR #1 原始改动为 4 个文件、40 行新增；审查后保留设备包装字段和独立具名导出，补齐测试、发布文档及许可证署名。
+- 国际 Provider 为 `qwenwork-intl`，显示名“千问办公国际版 QwenWork Intl”；不接国内固定渠道、已有账号复用或桌面会员活动。
+- 有效 PKCE 参数实测 `gateway.qwenwork.ai/device/selectAccounts` 返回 302，Location 为 `qwenwork.ai/oauth2/auth`；待授权 poll 返回 404 `{}`。
+- 本机没有国际版账号，因此未独立复验登录后的模型目录和聊天；PR 作者报告的登录与聊天 200 不作为本机实测证据。
+- 协议上游为 `magpie-community/plugins/packages/qoder@0.2.71`（MIT），再往上为 `ufec/CLIProxyAPI`（MIT）。
+- `LICENSE` 已改为实际署名 `MYCF711 and contributors`；`NOTICE.md` 保留 Gyl1219 / PR #1 和上游署名，并随附两份完整 MIT 许可。
+
+## 8. 回滚
 
 ```bash
 magpie plugin rm magpie-qwenwork-affiliate

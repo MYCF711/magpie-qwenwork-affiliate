@@ -3,10 +3,10 @@
   "name": "千问办公 QwenWork",
   "providers": [
     "qwenwork-affiliate",
-    "qwenwork-intl-affiliate"
+    "qwenwork-intl"
   ],
   "summary": {
-    "en": "Independent QwenWork provider with existing-account reuse and automatic check-in, also qwenwork.ai international.",
-    "zh": "独立千问办公供应商插件，支持复用本机已有账号和自动签到，并接入国际站 qwenwork.ai。"
+    "en": "Independent QwenWork CN and international providers, with existing-account reuse and automatic check-in on CN.",
+    "zh": "独立千问办公国内版与国际版供应商，国内版支持复用本机已有账号和自动签到。"
   }
 }

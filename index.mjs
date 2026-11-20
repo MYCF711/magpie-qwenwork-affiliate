@@ -166,10 +166,10 @@ export const QwenWorkAffiliateAuthPlugin = async (_ctx = {}, _options = {}) => {
 
 // 千问办公国际版（qwenwork.ai）：走站点自己的设备包装器，不挂邀请/归因与桌面会员任务
 // （那两者只在国内站存在），所以直接用 vendor 的插件。
-const INTL_PROVIDER = "qwenwork-intl-affiliate"
-const INTL_PROVIDER_NAME = "千问办公国际版"
+const INTL_PROVIDER = "qwenwork-intl"
+const INTL_PROVIDER_NAME = "千问办公国际版 QwenWork Intl"
 const INTL_SITE = Object.freeze({ ...qwenWorkInternal.SITES["qwenwork-intl"], id: INTL_PROVIDER, name: INTL_PROVIDER_NAME })
-export const QwenWorkIntlAffiliateAuthPlugin = protocol.makePlugin(INTL_SITE)
+export const QwenWorkIntlAuthPlugin = protocol.makePlugin(INTL_SITE)
 
 // 测试入口；顶层只导出一个插件工厂函数。
 export const _internal = { PROVIDER, PROVIDER_NAME, DEFAULT_ATTRIBUTION_ID, SITE, withModelCapabilities }

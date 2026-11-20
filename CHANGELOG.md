@@ -1,5 +1,16 @@
 # 更新记录
 
+## 0.4.3 — 2026-11-21
+
+**新增 QwenWork 国际版并补齐上游许可署名**
+
+- 合并并整理 Gyl1219 的 PR #1：新增 `qwenwork-intl`，显示名“千问办公国际版 QwenWork Intl”
+- 国际设备流使用独立 `deviceWeb / deviceClientId / deviceRedirect`，国内站点默认值保持不变
+- 国际版不接国内固定渠道、账号复用或桌面会员活动，两个具名导出各自维护登录态
+- 修正 LICENSE 实际署名为 `MYCF711 and contributors`，NOTICE 保留 PR 贡献者与上游来源
+- 随附 `magpie-community/plugins` 和 CLIProxyAPI 的完整 MIT 许可文本
+- 新增多 Provider、国际设备流、CN 默认值与许可证回归测试；公开仓库仍不含测试或 CI
+
 ## 0.4.2 — 2026-11-21
 
 **恢复正常插件显示名**
