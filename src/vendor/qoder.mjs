@@ -641,11 +641,12 @@ async function deviceSignIn(site) {
   const challenge = b64url(createHash("sha256").update(verifier).digest())
   const nonce = randomUUID()
   const machineId = randomUUID()
-  const q = new URLSearchParams({ challenge, challenge_method: "S256", nonce, machine_id: machineId, client_id: site.clientId })
-  if (site.redirect) q.set("redirect_uri", site.redirect)
+  const q = new URLSearchParams({ challenge, challenge_method: "S256", nonce, machine_id: machineId, client_id: site.deviceClientId ?? site.clientId })
+  const deviceRedirect = site.deviceRedirect ?? site.redirect
+  if (deviceRedirect) q.set("redirect_uri", deviceRedirect)
   const until = Date.now() + SIGN_IN_TIMEOUT
   return {
-    url: `${site.web}/device/selectAccounts?${q}`,
+    url: `${site.deviceWeb ?? site.web}/device/selectAccounts?${q}`,
     instructions: `Sign in to ${site.name} in the browser and authorize this device`,
     method: "auto",
     async callback() {
@@ -2904,7 +2905,9 @@ function deviceRefreshBody(site, refresh, a = {}) {
   const body = a?.identity === "biz" && a?.teamId
     ? { refresh_token: refresh, target: "biz", team_id: a.teamId }
     : { refresh_token: refresh, target: site.deviceRefreshTarget }
-  return site.clientId && site.redirect ? { ...body, client_id: site.clientId, redirect_uri: site.redirect } : body
+  const clientId = site.deviceClientId ?? site.clientId
+  const redirect = site.deviceRedirect ?? site.redirect
+  return clientId && redirect ? { ...body, client_id: clientId, redirect_uri: redirect } : body
 }
 
 // refreshDevice trades the device refresh token for a new pair; it rotates
@@ -3285,6 +3288,26 @@ const SITES = {
     openapi: "https://gateway.qwenwork.cn",
     api: "https://gateway.qwenwork.cn",
     fallbackModels: QWORK_FALLBACK_LISTING,
+  },
+  // QwenWork's international site. Its sign-in runs through the site's own
+  // device wrapper, which holds a client of its own: measured, the wrapper
+  // answers 302 only for cc65e5fc-… with redirect_uri=qwenwork://, and hands
+  // the issuer qwenwork-desktop-app plus its gateway callback. The poll and
+  // every API call are on that same gateway; openapi.qoder.sh serves none of
+  // the device routes.
+  "qwenwork-intl": {
+    ...QWENWORK_COMMON,
+    id: "qwenwork-intl",
+    name: "QwenWork Intl",
+    clientId: "qwenwork-desktop-app",
+    redirect: "https://gateway.qwenwork.ai/oauth/callback",
+    web: "https://qwenwork.ai",
+    openapi: "https://gateway.qwenwork.ai",
+    api: "https://gateway.qwenwork.ai",
+    // the wrapper, and the client and scheme only it knows
+    deviceWeb: "https://gateway.qwenwork.ai",
+    deviceClientId: "cc65e5fc-05bd-4f5d-a4e8-0df19aa3d75a",
+    deviceRedirect: "qwenwork://",
   },
 }
 
@@ -4214,6 +4237,7 @@ const makePlugin = (site) => async ({ client }) => {
 export const QoderAuthPlugin = makePlugin(SITES.qoder)
 export const QoderCNAuthPlugin = makePlugin(SITES["qoder-cn"])
 export const QwenWorkAuthPlugin = makePlugin(SITES.qwenwork)
+export const QwenWorkIntlAuthPlugin = makePlugin(SITES["qwenwork-intl"])
 
 // enterpriseDomain reads what the user entered as their enterprise's
 // address, as the desktop client's enterprise mode reads its endpoint

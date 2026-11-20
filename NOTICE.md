@@ -2,7 +2,7 @@
 
 本项目基于 `MYCF711/magpie-plugin-scaffold`（MIT）派生，部分通用协议原语与工程模式来自以下 MIT 项目。
 
-此外，`src/vendor/qoder.mjs` 直接保留 `@magpie-community/opencode-qoder-auth@0.2.71` 的 QwenWork 设备登录、模型、COSY 请求、续期与额度适配实现，来源为 `magpie-community/plugins` 的 `packages/qoder`（MIT）。该文件含厂商域名、签名协议与模型目录，相关版权与上游许可归原作者所有；随附 `src/vendor/LICENSE-CLIProxyAPI`。
+此外，`src/vendor/qoder.mjs` 直接保留 `@magpie-community/opencode-qoder-auth@0.2.71` 的 QwenWork 设备登录、模型、COSY 请求、续期与额度适配实现，来源为 `magpie-community/plugins` 的 `packages/qoder`（MIT），其协议实现再往上引用 `ufec/CLIProxyAPI`（MIT）。相关版权与上游许可归原作者所有；完整上游许可分别随附在 `src/vendor/LICENSE-magpie-community-plugins` 与 `src/vendor/LICENSE-CLIProxyAPI`。
 
 `icon.png` 来自用户提供的、已验证 DingTalk 有效签名的千问办公安装包，仅用于标识对应产品，图标权利不归本项目作者所有。
 
@@ -59,5 +59,9 @@
   - live models 的已知 / 未知条目分支与能力继承边界（`src/models.mjs`）
 - `magpie-wps-lingxi` — https://github.com/providers-aaaa/magpie-wps-lingxi（MIT，KevinFX-code and contributors）
   - 空闲超时只摘除等待者、在飞数据块进入队列且 done/error 可重放（`src/stream-reader.mjs`）；usage 旧值立即返回并后台单飞刷新（`src/usage-cache.mjs`）
+
+## 直接贡献者
+
+- `Gyl1219`（https://github.com/Gyl1219）：通过 PR #1（https://github.com/MYCF711/magpie-qwenwork-affiliate/pull/1）贡献 qwenwork.ai 设备包装字段、国际站点配置与独立 Provider。该部分按本项目 MIT 许可分发，相关贡献署名保留在此。
 
 以上项目的版权归各自作者所有，按 MIT 许可使用。本项目自身同样以 MIT 许可发布，完整许可正文见 `LICENSE`。
