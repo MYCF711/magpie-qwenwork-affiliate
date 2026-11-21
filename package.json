@@ -1,6 +1,6 @@
 {
   "name": "magpie-qwenwork-affiliate",
-  "version": "0.5.1",
+  "version": "0.5.0",
   "description": "Independent QwenWork provider for Magpie with account reuse and automatic check-in.",
   "type": "module",
   "main": "./index.mjs",

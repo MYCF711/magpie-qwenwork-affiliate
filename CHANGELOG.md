@@ -1,17 +1,5 @@
 # 更新记录
 
-## 0.5.1 — 2026-11-21
-
-**出站身份伪装：不再把本机名交给上游**
-
-官方：客户端把 `os.hostname()` 原样放进 `Cosy-MachineHostname`，等于每次请求都报出真实电脑名。
-我们：改发按账号派生的稳定假名（`DESKTOP-XXXXXXX`，与真实 Windows 主机名同形），同账号恒定、换账号不同、可用 `QWENWORK_HOSTNAME` 覆盖。
-为什么更好：去掉本机指纹，格式与客户端一致不影响任何校验；无新增配置、无额外请求。
-
-- 新增 `src/fingerprint.mjs`：`pseudoHostname` / `pseudoMachineId` / `outboundHostname` / `outboundMachineId`
-- `src/vendor/qoder.mjs` 的 `chatHeaders` 改用假名，其余 COSY 字段不变
-- 新增 4 条单测（稳定性、形态、不等于真实主机名、环境变量覆盖）
-
 ## 0.5.0 — 2026-11-21
 
 **国际版放出 9 个被聚合掉的真实模型（逆向桌面客户端）**
