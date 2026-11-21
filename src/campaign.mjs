@@ -238,12 +238,15 @@ async function runOfficialCaseReplay(fetchImpl, accessToken, campaignId, replayC
   return { sessionId, turnId, caseId: replayCase.caseId, archiveSha256: replayCase.archiveSha256 }
 }
 
+const PLAN_LABELS = { basic: "个人基础版", standard: "个人标准版", advanced: "个人高级版" }
+
 function benefitText(benefit) {
-  return benefit?.type === "subscription"
-    ? `${benefit.plan ?? "个人会员"} ${benefit.months ?? "?"} 个月`
-    : benefit?.type === "credits"
-      ? `${benefit.credits} 积分（${benefit.valid_days} 天有效）`
-      : "活动福利"
+  if (benefit?.type === "subscription") {
+    const plan = PLAN_LABELS[String(benefit.plan ?? "")] ?? benefit.plan ?? "个人会员"
+    return `${plan} ${benefit.months ?? "?"} 个月`
+  }
+  if (benefit?.type === "credits") return `${benefit.credits} 积分（${benefit.valid_days} 天有效）`
+  return "活动福利"
 }
 
 export async function runDesktopCampaignCheckin({
@@ -252,14 +255,14 @@ export async function runDesktopCampaignCheckin({
   campaignId = DESKTOP_CAMPAIGN_ID,
   replayCase = OFFICIAL_REPLAY_CASE,
 } = {}) {
-  if (typeof accessToken !== "string" || !accessToken.trim()) return { outcome: "inactive", message: "千问办公未登录，无法检查活动福利" }
+  if (typeof accessToken !== "string" || !accessToken.trim()) return { outcome: "inactive", message: "未登录，无法检查会员福利" }
 
   // 已开通基础版的账号只读套餐并跳过，不再碰 ensure / replay / claim。
   const currentPlan = await readPersonalPlan(fetchImpl, accessToken)
   if (currentPlan?.pid === "qwen-office-basic" && currentPlan?.is_subscribed === true) {
     return {
       outcome: "claimed",
-      message: "个人基础版已开通，自动签到跳过重复领取",
+      message: "已开通个人基础版，本次跳过重复领取",
       claimStatus: "succeeded",
       benefit: { type: "subscription", plan: "basic", months: 1 },
       plan: currentPlan,
@@ -282,7 +285,7 @@ export async function runDesktopCampaignCheckin({
         outcome: "ineligible",
         // 官方口径：此前在桌面端发起过任务（含已领过本活动会员）的账号不可再参与，
         // 属于一次性活动，不是插件故障。把原因写清楚，避免用户以为签到坏了。
-        message: "当前账号不符合首次桌面活动资格：该账号此前已在桌面端发起过任务（或已领过本活动会员）。本活动每个账号仅限一次，无法重复领取",
+        message: "该账号不符合活动资格：此前已在桌面端发起过任务或已领过本活动会员。本活动每个账号仅限一次，无法重复领取",
         eligibility,
       }
     }
@@ -310,7 +313,7 @@ export async function runDesktopCampaignCheckin({
       if (error instanceof CampaignError && error.code === "desktop_task_incomplete") {
         return {
           outcome: "done",
-          message: "官方案例回放已提交，服务端尚未确认完成；稍后复查，不记为已领取",
+          message: "官方案例已提交，官方尚未确认；稍后自动复查，暂不记为已领取",
           eligibility,
           replay,
           code: error.code,
@@ -324,7 +327,7 @@ export async function runDesktopCampaignCheckin({
 
   return {
     outcome: claim.claim_status === "succeeded" ? "claimed" : "done",
-    message: claim.claim_status === "succeeded" ? `官方已发放：${benefitText(claim.benefit)}` : `官方领取处理中：${benefitText(claim.benefit)}`,
+    message: claim.claim_status === "succeeded" ? `已发放：${benefitText(claim.benefit)}` : `官方处理中：${benefitText(claim.benefit)}，稍后自动复查`,
     ...(eligibility ? { eligibility } : {}),
     benefit: claim.benefit,
     claimStatus: claim.claim_status,

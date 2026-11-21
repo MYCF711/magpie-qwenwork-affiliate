@@ -139,7 +139,7 @@ export const QwenWorkAffiliateAuthPlugin = async (_ctx = {}, _options = {}) => {
       },
       async checkin(getAuth) {
         const auth = await getAuth()
-        if (!auth?.access) return { outcome: "inactive", message: "千问办公未登录，无法检查首次桌面会员任务" }
+        if (!auth?.access) return { outcome: "inactive", message: "未登录，无法检查会员福利" }
         const key = accountKeyOf(auth) || "default"
         const previous = campaignAttempts.get(key)
         const retryMs = previous?.result?.claimStatus === "processing" ? 30_000 : 6 * 60 * 60_000
@@ -153,7 +153,7 @@ export const QwenWorkAffiliateAuthPlugin = async (_ctx = {}, _options = {}) => {
         } catch (error) {
           const result = {
             outcome: "failed",
-            message: `首次桌面会员任务失败：${String(error?.message ?? error).slice(0, 160)}`,
+            message: `签到未完成：${String(error?.message ?? error).slice(0, 160)}`,
             code: String(error?.code ?? "upstream_error"),
           }
           campaignAttempts.set(key, { at: Date.now(), result })
