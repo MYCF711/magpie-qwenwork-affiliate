@@ -7,7 +7,7 @@ import { ICON } from "./src/icon.mjs"
 import { normalizeDistributionChannel, parseAttribution, withAttribution } from "./src/growth.mjs"
 import { runDesktopCampaignCheckin } from "./src/campaign.mjs"
 import { createHash } from "node:crypto"
-import { MAAS_CHAT_PATH, createMaasCache, fetchChatModes, isMaasChatModel, isMaasMode, mintMaasSession, modeContext, modeDisplayName, modeKey, modeThinking, requestModelOf } from "./src/intl-maas.mjs"
+import { MAAS_CHAT_PATH, createMaasCache, fetchChatModes, isMaasChatModel, isMaasMode, maasUserAgent, mintMaasSession, modeContext, modeDisplayName, modeKey, modeThinking, requestModelOf } from "./src/intl-maas.mjs"
 import { createQwenWorkReuseMethods, latestQwenWorkCredential, qwenWorkDisplayName, syncQwenWorkCredentialFamily } from "./src/qwenwork-import.mjs"
 
 const PROVIDER = "qwenwork-affiliate"
@@ -246,6 +246,7 @@ export const QwenWorkIntlAuthPlugin = async (ctx = {}, options = {}) => {
               return await fetch(`${credential.baseUrl}${MAAS_CHAT_PATH}`, {
                 method: "POST",
                 headers: {
+                  "User-Agent": maasUserAgent(),
                   Accept: "application/json",
                   "Content-Type": "application/json",
                   Authorization: `Bearer ${credential.accessToken}`,

@@ -19,8 +19,15 @@ export const MAAS_CHAT_PATH = "/v1/chat/completions"
 // 与客户端 getQwenWorkClientHeaders 同形；版本串来自客户端包本身。
 const CLIENT = Object.freeze({ version: "1.2.1", release: "1.2.1-26092107" })
 
+// 客户端 UA：WAF 对没有 UA 或脚本默认 UA（python-urllib 等）的请求回 200 + HTML 挑战页，
+// 只有客户端自己的 UA 才稳定拿到 JSON。所有打这个上游的请求都显式带上它。
+export function maasUserAgent() {
+  return `qoderwork/${CLIENT.version}`
+}
+
 export function maasClientHeaders({ appModeId = "standard", requestId = randomUUID() } = {}) {
   return {
+    "User-Agent": maasUserAgent(),
     Accept: "application/json",
     "X-Request-Id": requestId,
     "X-QwenWork-Version": CLIENT.version,
