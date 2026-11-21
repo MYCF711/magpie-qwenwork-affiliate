@@ -174,3 +174,18 @@ POST /api/marketing/benefits/claim
 已领取后 `ensure` 会变为 `ineligible`，所以先用套餐识别已开通账号，再查 claim，避免误判。插件只在任务未完成时创建回放；案例包哈希变化时停止。processing 通过 `until` 让宿主30秒后复查，其他失败按账号限频6小时；自动签到调度由 Magpie 宿主负责，插件不创建额外定时器。
 
 Native OAuth 已验证：discovery 为 `https://qwenwork.cn/.well-known/openid-configuration`，client_id 为 `qwenwork-desktop-app`，scope 为 `openid offline_access qwen_work`，PKCE S256 + `127.0.0.1` loopback；Growth state 使用规范化渠道和服务端 `tracking_params`。
+
+## 7. 国际站的两份模型目录（2026-11-21 实测）
+
+`qwenwork.ai` 有两份不同的模型目录，不能混用：
+
+| 目录 | 内容 | 可否直接聊天 |
+|---|---|---|
+| `GET /algo/api/v2/model/list?Encode=1`（scene=`qwork`） | 3 条：`qwork-advanced / qwork-auto / qwork-ultimate` | ✅ 是聊天接口认可的 `model` |
+| `GET /api/desktop/chat-modes` | 11 条，含 `deepseek-flash`（DeepSeek-V4.1-Flash）、`glm-5.3`、`kimi-k3.1-pro` 等 | ❌ 当 `model` 发出去一律 400 `model_not_found` |
+
+`chat-modes` 是桌面客户端模型选择器自己的目录；把它的 `key` 直接当 `model` 发到 `gateway.qwenwork.ai/chat/completions`，实测全部返回 `unknown or disabled model`。附加 `chat_mode` 字段也会被忽略（响应 `model` 仍是 `qwork-auto` 的显示名），说明真正承载 mode 的字段尚未定位。
+
+因此插件只把 `qwork` 那 3 条作为可聊天模型；`chat-modes` 的 11 条在找到正确的请求体字段之前不进模型列表，避免用户选中即 400。
+
+另外：`chat-modes` 里 `qwen3.8-flash`、`glm-5.3` 各出现两次（一次显示名是 `Standard` / `Pro`），按 key 去重时要注意显示名撞名。
