@@ -1,5 +1,14 @@
 # 更新记录
 
+## 0.4.9 — 2026-11-21
+
+**国际版补上桌面端模型目录（DeepSeek-V4.1-Flash 等）**
+
+- 国际站只有 `/api/desktop/chat-modes` 回客户端 UI 那份目录；`/algo/api/v2/model/list` 固定 3 条，所以客户端里看得到 DeepSeek-V4.1-Flash、插件里却选不到
+- `qwenwork-intl` 的 `provider.models` 现在先取兼容目录，再用 chat-modes 按 key 补齐：3 → 12 条（含 `deepseek-flash` = `DeepSeek-V4.1-Flash`，上下文 1,000,000）
+- 只追加缺失的 key，不覆盖旧目录里已有的 3 条；chat-modes 请求失败、超时或 `enable:false` 时原样返回旧目录，不影响登录与聊天
+- 国内版 `qwenwork-affiliate` 不变
+
 ## 0.4.8 — 2026-11-21
 
 **把签到结果提示统一成人话**

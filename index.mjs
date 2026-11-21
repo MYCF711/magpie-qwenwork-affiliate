@@ -7,6 +7,7 @@ import { ICON } from "./src/icon.mjs"
 import { normalizeDistributionChannel, parseAttribution, withAttribution } from "./src/growth.mjs"
 import { runDesktopCampaignCheckin } from "./src/campaign.mjs"
 import { createQwenWorkReuseMethods, latestQwenWorkCredential, qwenWorkDisplayName, syncQwenWorkCredentialFamily } from "./src/qwenwork-import.mjs"
+import { fetchChatModes, mergeChatModes } from "./src/intl-chatmodes.mjs"
 
 const PROVIDER = "qwenwork-affiliate"
 const PROVIDER_NAME = "千问办公 QwenWork"
@@ -169,7 +170,27 @@ export const QwenWorkAffiliateAuthPlugin = async (_ctx = {}, _options = {}) => {
 const INTL_PROVIDER = "qwenwork-intl"
 const INTL_PROVIDER_NAME = "千问办公国际版 QwenWork Intl"
 const INTL_SITE = Object.freeze({ ...qwenWorkInternal.SITES["qwenwork-intl"], id: INTL_PROVIDER, name: INTL_PROVIDER_NAME })
-export const QwenWorkIntlAuthPlugin = protocol.makePlugin(INTL_SITE)
+const intlBase = protocol.makePlugin(INTL_SITE)
+export const QwenWorkIntlAuthPlugin = async (ctx = {}) => {
+  const base = await intlBase(ctx)
+  return {
+    ...base,
+    provider: {
+      ...base.provider,
+      async models(provider, options = {}) {
+        const baseModels = await base.provider.models(provider, options)
+        const access = options?.auth?.access
+        if (!access) return baseModels
+        try {
+          const modes = await fetchChatModes(INTL_SITE, access)
+          return mergeChatModes(INTL_SITE, baseModels, modes)
+        } catch {
+          return baseModels
+        }
+      },
+    },
+  }
+}
 
 // 测试入口；顶层只导出一个插件工厂函数。
 export const _internal = { PROVIDER, PROVIDER_NAME, DEFAULT_ATTRIBUTION_ID, SITE, withModelCapabilities }
