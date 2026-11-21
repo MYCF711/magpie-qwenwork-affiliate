@@ -63,23 +63,55 @@ async function requestJson(fetchImpl, url, { method = "GET", token, body, header
   return payload
 }
 
-async function requestBytes(fetchImpl, url, token) {
-  let response
+// 官方案例包的下载地址是一次 302 到 OSS 的短签名 URL（x-oss-expires=60）。
+// 宿主的 fetch 可能不跟随重定向（实测有宿主直接回 302），所以自己跟；跳到别的源时
+// 必须去掉 Authorization——OSS 只认自己的签名，带上千问的 token 反而可能被拒。
+const MAX_REDIRECTS = 3
+
+function redirectTarget(location, base) {
+  if (!location) return null
   try {
-    response = await fetchImpl(url, {
-      headers: { ...appHeaders(token), Accept: "application/octet-stream" },
-      signal: AbortSignal.timeout(30_000),
-    })
-  } catch (error) {
-    throw new CampaignError("官方案例包下载失败", { code: "upstream_unavailable", payload: String(error?.message ?? error).slice(0, 160) })
+    const next = new URL(location, base)
+    return next.protocol === "https:" ? next.toString() : null
+  } catch {
+    return null
   }
-  if (!response.ok) {
-    const text = (await response.text()).slice(0, 300)
-    throw new CampaignError(`官方案例包 HTTP ${response.status}`, { status: response.status, code: "upstream_unavailable", payload: text })
+}
+
+async function requestBytes(fetchImpl, url, token) {
+  let current = url
+  let crossOrigin = false
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    let response
+    try {
+      response = await fetchImpl(current, {
+        headers: crossOrigin
+          ? { Accept: "application/octet-stream" }
+          : { ...appHeaders(token), Accept: "application/octet-stream" },
+        redirect: "manual",
+        signal: AbortSignal.timeout(30_000),
+      })
+    } catch (error) {
+      throw new CampaignError("官方案例包下载失败", { code: "upstream_unavailable", payload: String(error?.message ?? error).slice(0, 160) })
+    }
+    if (response.status >= 300 && response.status < 400) {
+      const next = redirectTarget(response.headers.get("location"), current)
+      if (!next) {
+        throw new CampaignError(`官方案例包 HTTP ${response.status}`, { status: response.status, code: "upstream_unavailable", payload: "redirect without a usable location" })
+      }
+      if (new URL(next).origin !== new URL(current).origin) crossOrigin = true
+      current = next
+      continue
+    }
+    if (!response.ok) {
+      const text = (await response.text()).slice(0, 300)
+      throw new CampaignError(`官方案例包 HTTP ${response.status}`, { status: response.status, code: "upstream_unavailable", payload: text })
+    }
+    const bytes = Buffer.from(await response.arrayBuffer())
+    if (bytes.length > 2 * 1024 * 1024) throw new CampaignError("官方案例包超过大小限制", { code: "internal_error" })
+    return bytes
   }
-  const bytes = Buffer.from(await response.arrayBuffer())
-  if (bytes.length > 2 * 1024 * 1024) throw new CampaignError("官方案例包超过大小限制", { code: "internal_error" })
-  return bytes
+  throw new CampaignError("官方案例包重定向过多", { code: "upstream_unavailable" })
 }
 
 async function ensureEligibility(fetchImpl, accessToken, campaignId) {
@@ -157,8 +189,18 @@ export function verifyReplayArchive(bytes, expectedSha256) {
 }
 
 async function runOfficialCaseReplay(fetchImpl, accessToken, campaignId, replayCase) {
-  const caseUrl = await resolveOfficialCase(fetchImpl, accessToken, campaignId, replayCase)
-  const archive = await requestBytes(fetchImpl, caseUrl, accessToken)
+  // 案例地址签名只有 60 秒有效：失败后重新读一次 materials 拿新签名再试一次，
+  // 不把一次过期的链接当成活动不可用。
+  let archive
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const caseUrl = await resolveOfficialCase(fetchImpl, accessToken, campaignId, replayCase)
+    try {
+      archive = await requestBytes(fetchImpl, caseUrl, accessToken)
+      break
+    } catch (error) {
+      if (attempt === 1 || !(error instanceof CampaignError) || error.code !== "upstream_unavailable") throw error
+    }
+  }
   verifyReplayArchive(archive, replayCase.archiveSha256)
 
   // 回放对象是已下载且哈希验证的官方案例，不生成新答案，也不消耗模型 tokens。
