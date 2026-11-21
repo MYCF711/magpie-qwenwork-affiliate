@@ -278,7 +278,13 @@ export async function runDesktopCampaignCheckin({
     const initialError = error
     eligibility = await ensureEligibility(fetchImpl, accessToken, campaignId)
     if (eligibility.eligibility !== "eligible") {
-      return { outcome: "ineligible", message: "当前账号不符合本次首次桌面活动资格", eligibility }
+      return {
+        outcome: "ineligible",
+        // 官方口径：此前在桌面端发起过任务（含已领过本活动会员）的账号不可再参与，
+        // 属于一次性活动，不是插件故障。把原因写清楚，避免用户以为签到坏了。
+        message: "当前账号不符合首次桌面活动资格：该账号此前已在桌面端发起过任务（或已领过本活动会员）。本活动每个账号仅限一次，无法重复领取",
+        eligibility,
+      }
     }
     if (eligibility.should_redirect === true) {
       campaignToken = await switchPersonalIdentity(fetchImpl, accessToken)
