@@ -1,5 +1,14 @@
 # 更新记录
 
+## 0.4.6 — 2026-11-21
+
+**活动接口改用与聊天相同的客户端身份（风控一致性）**
+
+- 之前活动请求自造了一套身份：UA `QwenWork/2.1.0`、写死 build、平台/架构写死 win32/x64、且没有 `X-Request-Id`
+- 现在直接复用 vendor 的 `qwenworkClientHeaders`：UA `qoderwork/<版本>`、每次请求独立 `X-Request-Id`、平台/架构取真实运行环境
+- 同一账号在网关眼里不再同时出现两种客户端；只额外补 `Accept`、`Authorization` 与活动接口需要的 `X-QwenWork-App-Mode`
+- 新增回归锁：活动头与聊天头逐字段一致，且 `X-Request-Id` 每次不同
+
 ## 0.4.5 — 2026-11-21
 
 **修复新账号签到时官方案例包 302**

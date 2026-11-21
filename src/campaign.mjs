@@ -2,11 +2,13 @@
 // 默认不调用模型：回放包必须来自官方 materials，并通过 SHA256 校验。
 // 只有官方 claim 返回 succeeded 才算领取成功；eligible/processing 都不冒充到账。
 import { createHash, randomUUID } from "node:crypto"
+import { _internal as vendorInternal } from "./vendor/qoder.mjs"
+
+const { qwenworkClientHeaders } = vendorInternal
 
 export const DESKTOP_CAMPAIGN_ID = "hd_33f905bd-111b-4ce1-832b-01f1b06b306e"
 const QWENWORK_ORIGIN = "https://qwenwork.cn"
 const GATEWAY_ORIGIN = "https://gateway.qwenwork.cn"
-const APP = Object.freeze({ version: "2.1.0", release: "2.1.0-26111906", build: "26111906" })
 
 // 来自项目 materials 的固定官方案例。包哈希变化时停止，避免拿旧提示词回放新包。
 export const OFFICIAL_REPLAY_CASE = Object.freeze({
@@ -26,17 +28,16 @@ export class CampaignError extends Error {
   }
 }
 
+// 活动接口必须和聊天/账号接口使用同一套客户端身份。之前这里自造了一套
+// （UA QwenWork/2.1.0、写死 build、没有 X-Request-Id），同一个账号在网关眼里
+// 会同时出现两种客户端，属于典型风控信号。现在直接复用 vendor 里那份
+// qwenworkClientHeaders（qoderwork/1.2.1 + 每次请求的 X-Request-Id），
+// 只额外补 Accept、Authorization 和活动接口需要的 App-Mode。
 function appHeaders(accessToken, appModeId = "standard") {
   return {
+    ...qwenworkClientHeaders(),
     Accept: "application/json",
-    "User-Agent": `QwenWork/${APP.version}`,
-    "X-QwenWork-Version": APP.version,
-    "X-QwenWork-Release-Version": APP.release,
-    "X-QwenWork-Build": APP.build,
-    "X-QwenWork-Platform": "win32",
-    "X-QwenWork-Arch": "x64",
-    "X-QwenWork-Channel": "stable",
-    "X-QwenWork-App-Mode": appModeId,
+    ...(appModeId ? { "X-QwenWork-App-Mode": appModeId } : {}),
     Authorization: `Bearer ${accessToken}`,
   }
 }
