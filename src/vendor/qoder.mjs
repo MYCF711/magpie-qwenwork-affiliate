@@ -69,6 +69,8 @@ MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDA8iMH5c02LilrsERw9t6Pv5Nc
 XcW+ML9FoCI6AOvOzwIDAQAB
 -----END PUBLIC KEY-----`
 
+import { outboundHostname } from "../fingerprint.mjs"
+
 const QODER_SYS = "You are a Qoder agent. Use the instructions below and the tools available to you to assist the user."
 
 const hexID = () => randomUUID().replaceAll("-", "")
@@ -168,7 +170,8 @@ function chatHeaders(url, u, body, site, model, identity = {}) {
   delete h["Cosy-MachineToken"]
   delete h["Cosy-MachineType"]
   for (const key of ["Cosy-MachineToken", "Cosy-MachineType"]) if (identity[key]) h[key] = identity[key]
-  const host = machineHostname()
+  // 真实 os.hostname() 等于把本机名交给上游；这里按账号换成稳定同形假名
+  const host = outboundHostname(u?.uid ?? "qwenwork")
   if (host) h["Cosy-MachineHostname"] = host
   return { ...h, Accept: "text/event-stream", "Cache-Control": "no-cache", "X-Model-Key": model.key, "X-Model-Source": model.source }
 }
