@@ -189,3 +189,34 @@ Native OAuth 已验证：discovery 为 `https://qwenwork.cn/.well-known/openid-c
 因此插件只把 `qwork` 那 3 条作为可聊天模型；`chat-modes` 的 11 条在找到正确的请求体字段之前不进模型列表，避免用户选中即 400。
 
 另外：`chat-modes` 里 `qwen3.8-flash`、`glm-5.3` 各出现两次（一次显示名是 `Standard` / `Pro`），按 key 去重时要注意显示名撞名。
+
+## 8. 国际版的真实模型通道（MaaS，2026-11-21 逆向客户端 2.0.0.26111901）
+
+桌面客户端有两套执行策略（`runtimeServicesExtension`）：
+
+| 策略 | 判定 | 上游 | 可用模型 |
+|---|---|---|---|
+| `qoder-cli` | `harness=qoder-cli` | `gateway.qwenwork.ai` | 只有 `qwork-advanced / qwork-auto / qwork-ultimate` |
+| `opencode`（`oc`） | 其余 harness | 会话凭据里回传的 `base_url` | chat-modes 里的 11 个真实模型 |
+
+MaaS 两步走：
+
+```text
+POST https://gateway.qwenwork.ai/api/desktop-sessions
+  header: X-QwenWork-* + X-QwenWork-App-Mode + Authorization: Bearer <宿主 token>
+  body:   {"session_id":"<uuid>"}
+  → 201 {"access_token":"<JWT>","base_url":"https://api1.qwenwork.ai",
+         "expires_at_ms":…,"ttl_ms":7200000,"session_id":"<同一个 uuid>"}
+
+POST <base_url>/v1/chat/completions
+  header: Authorization: Bearer <access_token>
+  body:   {"model":"deepseek-flash", …}
+  → 200
+```
+
+要点：
+
+- `model` 用 chat-modes 的 key 原样发送；直发网关会 `400 model_not_found`，因为网关只认三个逻辑档。
+- `base_url` 由签发响应决定，不要写死 `maas.xiaoluozi.cn`（那是客户端的 `ENGINE_MAAS_BASE_URL` 兜底默认值，实测 401）。
+- 凭据 TTL 2 小时，客户端提前 10 分钟续期；`session_id` 必须回填一致，否则客户端会判为不一致。
+- harness 为 `oc` 的条目才有这几步；`qoder-cli` 条目走原网关签名通道。

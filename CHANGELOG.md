@@ -1,5 +1,18 @@
 # 更新记录
 
+## 0.5.0 — 2026-11-21
+
+**国际版放出 9 个被聚合掉的真实模型（逆向桌面客户端）**
+
+官方：网关只认 `qwork-advanted/auto/ultimate` 三个逻辑档，客户端却在 `chat-modes` 里列 11 个真实模型；把那些 key 直发网关一律 400 `model_not_found`。
+我们：照客户端的两套执行策略分开走 —— `harness=qoder-cli` 的仍走网关，`harness=oc` 的先用 `POST /api/desktop-sessions` 换 2 小时 MaaS 凭据，再拿响应里的 `base_url` + `access_token` 调 `/v1/chat/completions`。
+为什么更好：模型从 3 个变成 12 个，`DeepSeek-V4.1-Flash`、`GLM-5.3`、`Kimi-K3.1-Pro` 等直接可选；没有新增任何弹窗或额外操作。
+
+- 新增 `src/intl-maas.mjs`：签发、按账号缓存（提前 10 分钟续期）、目录读取、模型元数据
+- `index.mjs`：国际版 `provider.models` 合并 oc 模型；`auth.loader` 按模型键改写请求到 MaaS，`qwork-*` 与其它请求原样走网关
+- 换凭据失败自动回退原通道，不阻塞登录与聊天
+- 新增 7 条单测（签发校验、缓存续期、目录过滤、harness 判定、元数据、路由判定）
+
 ## 0.4.8 — 2026-11-21
 
 **把签到结果提示统一成人话**

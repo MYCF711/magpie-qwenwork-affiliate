@@ -6,6 +6,8 @@ import { uidOf } from "./src/credential.mjs"
 import { ICON } from "./src/icon.mjs"
 import { normalizeDistributionChannel, parseAttribution, withAttribution } from "./src/growth.mjs"
 import { runDesktopCampaignCheckin } from "./src/campaign.mjs"
+import { createHash } from "node:crypto"
+import { MAAS_CHAT_PATH, createMaasCache, fetchChatModes, isMaasChatModel, isMaasMode, mintMaasSession, modeContext, modeDisplayName, modeKey, modeThinking, requestModelOf } from "./src/intl-maas.mjs"
 import { createQwenWorkReuseMethods, latestQwenWorkCredential, qwenWorkDisplayName, syncQwenWorkCredentialFamily } from "./src/qwenwork-import.mjs"
 
 const PROVIDER = "qwenwork-affiliate"
@@ -169,7 +171,98 @@ export const QwenWorkAffiliateAuthPlugin = async (_ctx = {}, _options = {}) => {
 const INTL_PROVIDER = "qwenwork-intl"
 const INTL_PROVIDER_NAME = "千问办公国际版 QwenWork Intl"
 const INTL_SITE = Object.freeze({ ...qwenWorkInternal.SITES["qwenwork-intl"], id: INTL_PROVIDER, name: INTL_PROVIDER_NAME })
-export const QwenWorkIntlAuthPlugin = protocol.makePlugin(INTL_SITE)
+const intlBase = protocol.makePlugin(INTL_SITE)
+
+// 国际版的真实模型：网关只认 3 个 qwork 档，其余 11 个真实模型走 MaaS 会话通道
+// （mint → base_url + access_token）。这里负责模型补全与请求改写，见 src/intl-maas.mjs。
+const intlMaasCache = createMaasCache()
+
+function intlAuthKey(auth) {
+  const raw = String(auth?.uid ?? auth?.userId ?? auth?.access ?? "")
+  return raw ? createHash("sha256").update(raw).digest("hex").slice(0, 16) : "anonymous"
+}
+
+export const QwenWorkIntlAuthPlugin = async (ctx = {}, options = {}) => {
+  const base = await intlBase(ctx, options)
+  const baseLoader = base?.auth?.loader
+  return {
+    ...base,
+    provider: {
+      ...base.provider,
+      async models(provider, opts = {}) {
+        const models = await base.provider.models(provider, opts)
+        try {
+          const auth = opts?.auth
+          if (!auth?.access) return models
+          const modes = await fetchChatModes({ accessToken: auth.access })
+          const merged = { ...models }
+          for (const mode of modes) {
+            if (!isMaasMode(mode)) continue
+            const id = modeKey(mode)
+            if (!id || merged[id]) continue
+            const effort = modeThinking(mode)
+            merged[id] = qwenWorkInternal.runtimeModel(INTL_SITE, {
+              id,
+              name: modeDisplayName(mode) || id,
+              context: modeContext(mode) || undefined,
+              images: mode?.is_vl === true,
+              efforts: effort ? [effort] : [],
+              free: false,
+              rate: 0,
+            })
+          }
+          return merged
+        } catch {
+          // 目录读不到就维持网关那 3 个，不影响登录与聊天
+          return models
+        }
+      },
+    },
+    auth: {
+      ...base.auth,
+      async loader(getAuth) {
+        const inner = await baseLoader(getAuth)
+        const innerFetch = inner?.fetch
+        if (typeof innerFetch !== "function") return inner
+        return {
+          ...inner,
+          async fetch(input, init) {
+            const url = typeof input === "string" ? input : input instanceof URL ? input.href : input?.url
+            let path = ""
+            try {
+              path = new URL(String(url)).pathname
+            } catch {
+              return innerFetch(input, init)
+            }
+            if (!path.endsWith("/chat/completions")) return innerFetch(input, init)
+            const model = requestModelOf(init?.body)
+            if (!isMaasChatModel(model)) return innerFetch(input, init)
+            try {
+              const auth = await getAuth()
+              const key = intlAuthKey(auth)
+              const credential = await intlMaasCache.get(key, () => mintMaasSession({ accessToken: auth?.access }))
+              const id = model.replace(/^qwenwork-intl\//, "")
+              const body = JSON.stringify({ ...JSON.parse(init.body), model: id })
+              return await fetch(`${credential.baseUrl}${MAAS_CHAT_PATH}`, {
+                method: "POST",
+                headers: {
+                  Accept: "application/json",
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${credential.accessToken}`,
+                },
+                body,
+                signal: init?.signal,
+              })
+            } catch {
+              // 换凭据失败就交回原通道，让宿主按正常上游错误处理
+              return innerFetch(input, init)
+            }
+          },
+        }
+      },
+    },
+  }
+}
 
 // 测试入口；顶层只导出一个插件工厂函数。
 export const _internal = { PROVIDER, PROVIDER_NAME, DEFAULT_ATTRIBUTION_ID, SITE, withModelCapabilities }
